@@ -10,6 +10,7 @@ const connection = require('./util/database');
 const Product = require('./models/product');
 const User = require('./models/user');
 const ProductUser = require('./models/product-user');
+const Category = require('./models/category');
 // const Cart = require('./models/cart');
 // const CartItem = require('./models/cart-item');
 
@@ -124,6 +125,14 @@ app.post('/edit-product', (req, res) => {
 app.post('/add-user', (req, res) => {
     const phone = req.body.phone;
     const password = req.body.password;
+    const name = req.body.name;
+    const plan = req.body.plan;
+    const age = req.body.age;
+    const gender = req.body.gender;
+    const status = req.body.status;
+    const priceStart = req.body.priceStart;
+    const priceEnd = req.body.priceEnd;
+
 
     User.findAll({ where: {
         phone: phone
@@ -132,9 +141,18 @@ app.post('/add-user', (req, res) => {
         if(!users[0]) {
             return User.create({
                 phone: phone,
-                password: password
+                password: password,
+                name: name,
+                age: age,
+                gender: gender,
+                status: status,
+                priceStart: priceStart,
+                priceEnd: priceEnd
             })
             .then(result => {
+                plan.forEach(el => {
+                    Category.create({ title: el, userId: result.id });
+                });
                 res
                 .status(200)
                 .send({ phone: result.phone, msg: "user created" });
@@ -186,32 +204,50 @@ app.post('/login', (req, res) => {
 <===== Добавить Записи С ФИЛЬТРОМ =====>
 */
 app.post('/products-filter', jwtCheck, (req, res) => {
-    const title = req.body.title;
-    // const filter2 = req.body.filter2;
-    if(req.user.user_id !== 1) {
-        Product.findAll({ where: {
-            title: title
-        }})
-        .then(products => {
-            console.log(products)
+    const userId = req.user.user_id;
 
-            if (products.length < 1) {
+    if (userId !== 1) {
+
+        Category.findAll({ 
+            where: {
+                userId: userId,
+            },
+            attributes: ['title']
+        })
+        .then(categorys => {
+            
+
+            if (categorys.length < 1) {
                 res
                 .status(200)
                 .send('Нет подходящих курсов, по вашим фильтрам.');
                 return;
             }
-            products.forEach(product => {
-                ProductUser.create({ productId: product.id, userId: req.user.user_id })
-            });
+            // categorys.forEach(category => {
 
+            //     Product.findAll({
+            //         where: {
+            //             direction: category.title
+            //         },
+            //         attributes: ['id', 'title', 'description', 'price', 'imageUrl']
+            //     })
+            //     .then(products => {
+            //         productsObject.id = products.id;
+            //         productsObject.title = products.title;
+            //         products.push(productsObject);
+                    
+            //     })
+            // });
             res
             .status(200)
-            .json("Add filters");
+            .send('text');
         })
+
         .catch(err => console.log(err));
     } else {
-        Product.findAll()
+        Product.findAll({ 
+            attributes: ['id', 'title', 'description', 'price', 'imageUrl']
+        })
         .then(products => {
             res
             .status(200)
@@ -224,6 +260,7 @@ app.post('/products-filter', jwtCheck, (req, res) => {
 <===== Поулчить Записи С ФИЛЬТРОМ =====>
 */
 app.get('/products-filter-get', jwtCheck, (req, res) => {
+    console.log(req.params)
     if(req.user.user_id !== 1) {
         User.findAll({
             include: [{
@@ -265,6 +302,19 @@ app.get('/products-filter-get', jwtCheck, (req, res) => {
     }
 });
 
+// isAdmin
+app.post('/is-admin', jwtCheck, (req, res) => {
+    if (req.user.user_id !== 1) {
+        res
+        .status(200)
+        .json({ isAdmin: false });
+    } else {
+        res
+        .status(200)
+        .json({ isAdmin: true });
+    }
+});
+
 app.get('/status', jwtCheck, (req, res) => {
     const localTime = (new Date()).toLocaleTimeString();
 
@@ -284,6 +334,10 @@ ProductUser.belongsTo(Product);
 ProductUser.belongsTo(User);
 User.hasMany(ProductUser);
 
+
+Category.belongsTo(User);
+User.hasMany(Category);
+
 // Product.belongsTo(User, { constraints: true, onDelete: 'CASCADE' });
 // User.hasMany(Product);
 // User.hasOne(Cart);
@@ -299,8 +353,7 @@ connection
     })
     .then(user => {
         if (!user) {
-            User.create({ phone: '87474891204', password: 'admin'});
-            return User.create({ phone: '89216554688', password: 'guest'});
+            return User.create({ phone: '87474891204', password: 'admin'});
         }
         return user;
     })

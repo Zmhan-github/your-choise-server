@@ -10,7 +10,13 @@ const User = connection.define('user', {
         primaryKey: true
     },
     phone: Sequelize.STRING,
-    password: Sequelize.STRING
+    password: Sequelize.STRING,
+    name: Sequelize.STRING,
+    age: Sequelize.STRING,
+    gender: Sequelize.STRING,
+    status: Sequelize.STRING,
+    priceStart: Sequelize.INTEGER,
+    priceEnd: Sequelize.INTEGER
 });
 
 
