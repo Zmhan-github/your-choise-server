@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const expressjwt = require('express-jwt');
 
+const Op = require('sequelize').Op;
 const connection = require('./util/database');
 
 
@@ -13,6 +14,7 @@ const ProductUser = require('./models/product-user');
 const Category = require('./models/category');
 // const Cart = require('./models/cart');
 // const CartItem = require('./models/cart-item');
+
 
 
 const app = express();
@@ -200,62 +202,7 @@ app.post('/login', (req, res) => {
     })
     .catch(err => console.log(err));
 });
-/*
-<===== Добавить Записи С ФИЛЬТРОМ =====>
-*/
-app.post('/products-filter', jwtCheck, (req, res) => {
-    const userId = req.user.user_id;
 
-    if (userId !== 1) {
-
-        Category.findAll({ 
-            where: {
-                userId: userId,
-            },
-            attributes: ['title']
-        })
-        .then(categorys => {
-            
-
-            if (categorys.length < 1) {
-                res
-                .status(200)
-                .send('Нет подходящих курсов, по вашим фильтрам.');
-                return;
-            }
-            // categorys.forEach(category => {
-
-            //     Product.findAll({
-            //         where: {
-            //             direction: category.title
-            //         },
-            //         attributes: ['id', 'title', 'description', 'price', 'imageUrl']
-            //     })
-            //     .then(products => {
-            //         productsObject.id = products.id;
-            //         productsObject.title = products.title;
-            //         products.push(productsObject);
-                    
-            //     })
-            // });
-            res
-            .status(200)
-            .send('text');
-        })
-
-        .catch(err => console.log(err));
-    } else {
-        Product.findAll({ 
-            attributes: ['id', 'title', 'description', 'price', 'imageUrl']
-        })
-        .then(products => {
-            res
-            .status(200)
-            .json(products);
-        })
-        .catch(err => console.log(err));
-    }
-});
 /*
 <===== Поулчить Записи С ФИЛЬТРОМ =====>
 */
@@ -330,6 +277,133 @@ app.get('*', (req, res) => {
 });
 
 
+app.post('/products-filter', jwtCheck, (req, res) => {
+    const userId = req.user.user_id;
+
+    if (userId !== 1) {
+
+        User.findAll({ 
+            where: {
+                id: userId,
+            },
+            attributes: ['id', 'name', 'phone', 'age', 'gender', 'status', 'priceStart', 'priceEnd'],
+            include: [{
+                model: Category,
+                where: {
+                    userId: userId
+                },
+                attributes: [['title', 'direction']]
+            }]
+        })
+        .then(users => {
+            
+
+            if (users.length < 1) {
+                res
+                .status(200)
+                .send('User not found!');
+                return;
+            }
+
+            return users[0];
+        })
+        .then(user => {
+            Product.findAll({
+                where: {
+                    status: user.status,
+                    age_start: {
+                        [Op.lte]: user.age
+                    },
+                    age_end: {
+                        [Op.gte]: user.age
+                    },
+                    price: {
+                        [Op.between]: [user.priceStart, user.priceEnd], 
+                    },
+                    [Op.or]: [{gender: user.gender }, {gender: 'MF'}]
+                },
+                attributes: ['id', 'title', 'description', 'price', 'imageUrl']
+            })
+            .then(products => {
+                if (products.length < 1) {
+                    res
+                    .status(200)
+                    .send('You filter not courses');
+                    return 'You filter not courses';
+                }
+                return products;
+            })
+            .then(filterProducts => {
+                if (filterProducts === 'You filter not courses') {
+                    return;
+                }
+                res
+                .status(200)
+                .json(filterProducts);
+            })
+            .catch(error => {
+                console.error(error)
+            })
+        })
+        .catch(err => console.log(err));
+    } else {
+        Product.findAll({ 
+            attributes: ['id', 'title', 'description', 'price', 'imageUrl']
+        })
+        .then(products => {
+            res
+            .status(200)
+            .json(products);
+        })
+        .catch(err => console.log(err));
+    }
+});
+/*
+<===== Поулчить Записи С ФИЛЬТРОМ =====>
+*/
+app.get('/user-info', jwtCheck, (req, res) => {
+    console.log(req.params)
+    if(req.user.user_id !== 1) {
+        User.findAll({
+            include: [{
+                model: ProductUser,
+                where: {
+                    userId: req.user.user_id
+                },
+                include: [ Product ]
+            }]
+        })
+        .then(users => {
+            users.forEach(user => {
+                user.product_users.forEach(product => console.log(product.product.get()));
+            });
+            // if (products.length < 1) {
+            //     res
+            //     .status(200)
+            //     .send('Нет подходящих курсов, по вашим фильтрам.');
+            //     return;
+            // }
+            // products.forEach(product => {
+            //     console.log(product);
+            //     ProductUser.create({ productId: product.id, userId: req.user.user_id })
+            // });
+ 
+            res
+            .status(200)
+            .json(req.user.user_id);
+        })
+        .catch(err => console.log(err));
+    } else {
+        Product.findAll()
+        .then(products => {
+            res
+            .status(200)
+            .json(products);
+        })
+        .catch(err => console.log(err));
+    }
+});
+
 ProductUser.belongsTo(Product);
 ProductUser.belongsTo(User);
 User.hasMany(ProductUser);
@@ -347,7 +421,7 @@ User.hasMany(Category);
 
 // force: true will drop the table if it already exists { force: true }
 connection
-    .sync({ force: true })
+    .sync()
     .then(result => {
         return User.findById(1);
     })
