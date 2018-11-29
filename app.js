@@ -12,6 +12,7 @@ const Product = require('./models/product');
 const User = require('./models/user');
 const ProductUser = require('./models/product-user');
 const Category = require('./models/category');
+const Zayavka = require('./models/zayavki');
 // const Cart = require('./models/cart');
 // const CartItem = require('./models/cart-item');
 
@@ -404,6 +405,80 @@ app.get('/user-info', jwtCheck, (req, res) => {
     }
 });
 
+app.post('/zayavka-na-kurs-proverka', jwtCheck, (req, res) => {
+    Zayavka.findAll({
+        where: {
+            userId: req.user.user_id,
+            productId: req.body.productId,
+        }
+    })
+    .then(result => {
+        if (result.length < 1) {
+            res
+            .status(200)
+            .send({msg: "Добавить"})
+        } else {
+            res
+            .status(200)
+            .send({msg: "Вы успешно записались на данный курс!"})
+        }
+    })
+    .catch(err => {
+        console.log(err)
+    })
+});
+
+app.post('/zayavka-na-kurs', jwtCheck, (req, res) => {
+
+    Zayavka.findAll({
+        where: {
+            userId: req.user.user_id,
+            productId: req.body.productId,
+        }
+    })
+    .then(result => {
+        if (result.length < 1) {
+        Zayavka.create({ userId: req.user.user_id, productId: req.body.productId })
+            .then(result => {
+                res
+                .status(200)
+                .send({msg: "Вы успешно записались на данный курс!"})
+            })
+            .catch(err => {
+                console.log(err);
+                res
+                .status(200)
+                .send({msg: "Error"})
+            })
+        } else {
+            res
+            .status(200)
+            .send({msg: "Вы успешно записались на данный курс!"})
+        }
+    })
+    .catch(err => {
+        console.log(err)
+    })
+});
+
+app.post('/zayavki-all', jwtCheck, (req, res) => {
+    Category.findAll({
+        include: [ User ],
+    })
+    .then(result => {
+        res
+        .status(200)
+        .json(result)
+    })
+    .catch(err => {
+        console.log(err)
+    })
+})
+
+
+
+
+
 ProductUser.belongsTo(Product);
 ProductUser.belongsTo(User);
 User.hasMany(ProductUser);
@@ -411,6 +486,11 @@ User.hasMany(ProductUser);
 
 Category.belongsTo(User);
 User.hasMany(Category);
+
+
+
+
+
 
 // Product.belongsTo(User, { constraints: true, onDelete: 'CASCADE' });
 // User.hasMany(Product);
@@ -421,7 +501,7 @@ User.hasMany(Category);
 
 // force: true will drop the table if it already exists { force: true }
 connection
-    .sync()
+    .sync({ force: true })
     .then(result => {
         return User.findById(1);
     })
