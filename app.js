@@ -462,7 +462,33 @@ app.post('/zayavka-na-kurs', jwtCheck, (req, res) => {
 });
 
 app.post('/zayavki-all', jwtCheck, (req, res) => {
-    Category.findAll({
+    Zayavka.findAll({
+        order: [
+            // Will escape title and validate DESC against a list of valid direction parameters
+        ['id', 'DESC'],
+        ],
+        include: [{
+            model: User,
+            attributes: [ 'name', 'phone' ]
+        },
+        {
+            model: Product,
+            attributes: ['id', 'title', 'description', 'price', 'imageUrl']
+        }]
+    })
+    .then(result => {
+        res
+        .status(200)
+        .json(result)
+    })
+    .catch(err => {
+        console.log(err)
+    })
+})
+
+
+app.post('/test', (req, res) => {
+    Product.findAll({
         include: [ User ],
     })
     .then(result => {
@@ -477,8 +503,6 @@ app.post('/zayavki-all', jwtCheck, (req, res) => {
 
 
 
-
-
 ProductUser.belongsTo(Product);
 ProductUser.belongsTo(User);
 User.hasMany(ProductUser);
@@ -487,21 +511,24 @@ User.hasMany(ProductUser);
 Category.belongsTo(User);
 User.hasMany(Category);
 
+Zayavka.belongsTo(User);
+Zayavka.belongsTo(Product);
 
 
 
 
+// Product.belongsTo(User);
 
-// Product.belongsTo(User, { constraints: true, onDelete: 'CASCADE' });
-// User.hasMany(Product);
-// User.hasOne(Cart);
+
+// User.hasOne(Cart);  
 // Cart.belongsTo(User);
 // Cart.belongsToMany(Product, { through: CartItem });
 // Product.belongsToMany(Cart, { through: CartItem });
 
-// force: true will drop the table if it already exists { force: true }
+
 connection
     .sync({ force: true })
+    // .sync()
     .then(result => {
         return User.findById(1);
     })
