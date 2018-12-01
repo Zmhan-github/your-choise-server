@@ -13,8 +13,8 @@ const User = require('./models/user');
 const ProductUser = require('./models/product-user');
 const Category = require('./models/category');
 const Zayavka = require('./models/zayavki');
-// const Cart = require('./models/cart');
-// const CartItem = require('./models/cart-item');
+const Message = require('./models/message');
+
 
 
 
@@ -24,14 +24,7 @@ const PORT = 3000;
 
 app.use(bodyParser.json());
 app.use(cors());
-// app.use((req, res, next) => {
-//     User.findById(1)
-//     .then(user => {
-//         req.user = user;
-//         next();
-//     })
-//     .catch(err => console.log(err));
-// });
+
 
 const jwtCheck = expressjwt({
     secret: "asd123445"
@@ -223,16 +216,7 @@ app.get('/products-filter-get', jwtCheck, (req, res) => {
             users.forEach(user => {
                 user.product_users.forEach(product => console.log(product.product.get()));
             });
-            // if (products.length < 1) {
-            //     res
-            //     .status(200)
-            //     .send('Нет подходящих курсов, по вашим фильтрам.');
-            //     return;
-            // }
-            // products.forEach(product => {
-            //     console.log(product);
-            //     ProductUser.create({ productId: product.id, userId: req.user.user_id })
-            // });
+
  
             res
             .status(200)
@@ -378,16 +362,7 @@ app.get('/user-info', jwtCheck, (req, res) => {
             users.forEach(user => {
                 user.product_users.forEach(product => console.log(product.product.get()));
             });
-            // if (products.length < 1) {
-            //     res
-            //     .status(200)
-            //     .send('Нет подходящих курсов, по вашим фильтрам.');
-            //     return;
-            // }
-            // products.forEach(product => {
-            //     console.log(product);
-            //     ProductUser.create({ productId: product.id, userId: req.user.user_id })
-            // });
+
  
             res
             .status(200)
@@ -420,11 +395,48 @@ app.post('/zayavka-na-kurs-proverka', jwtCheck, (req, res) => {
         } else {
             res
             .status(200)
-            .send({msg: "Вы успешно записались на данный курс!"})
+            .send({msg: "Ваша заявка успешно подана. В ближайшее время ожидайте звонка!"})
         }
     })
     .catch(err => {
         console.log(err)
+    })
+});
+
+app.post('/message-add', jwtCheck, (req, res) => {
+    Message.create({ userId: req.user.user_id, title: req.body.title, msg: req.body.msg })
+        .then(result => {
+            res
+            .status(200)
+            .send({msg: "Ваше сообщение успешно отправленно. В ближайшее время ожидайте СМС!"})
+        })
+        .catch(err => {
+            res
+            .status(200)
+            .send({msg: "Error"})
+        })
+});
+
+app.post('/messages', jwtCheck, (req, res)=> {
+    Message.findAll({
+        order: [
+            // Will escape title and validate DESC against a list of valid direction parameters
+        ['id', 'DESC'],
+        ],
+        include: [{
+            model: User,
+            attributes: [ 'name', 'phone' ]
+        }]
+    })
+    .then(result => {
+        res
+        .status(200)
+        .send(result)
+    })
+    .catch(err => {
+        res
+        .status(200)
+        .send({msg: "Error"})
     })
 });
 
@@ -442,7 +454,7 @@ app.post('/zayavka-na-kurs', jwtCheck, (req, res) => {
             .then(result => {
                 res
                 .status(200)
-                .send({msg: "Вы успешно записались на данный курс!"})
+                .send({msg: "Ваша заявка успешно подана. В ближайшее время ожидайте звонка!"})
             })
             .catch(err => {
                 console.log(err);
@@ -453,7 +465,7 @@ app.post('/zayavka-na-kurs', jwtCheck, (req, res) => {
         } else {
             res
             .status(200)
-            .send({msg: "Вы успешно записались на данный курс!"})
+            .send({msg: "Ваша заявка успешно подана. В ближайшее время ожидайте звонка!"})
         }
     })
     .catch(err => {
@@ -514,21 +526,13 @@ User.hasMany(Category);
 Zayavka.belongsTo(User);
 Zayavka.belongsTo(Product);
 
+Message.belongsTo(User);
 
 
-
-// Product.belongsTo(User);
-
-
-// User.hasOne(Cart);  
-// Cart.belongsTo(User);
-// Cart.belongsToMany(Product, { through: CartItem });
-// Product.belongsToMany(Cart, { through: CartItem });
 
 
 connection
     .sync({ force: true })
-    // .sync()
     .then(result => {
         return User.findById(1);
     })
