@@ -10,6 +10,7 @@ const Message = connection.define('message', {
         primaryKey: true
     },
     title: Sequelize.STRING,
+    msgTema: Sequelize.STRING,
     msg: Sequelize.STRING
 });
 

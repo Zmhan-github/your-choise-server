@@ -347,7 +347,7 @@ app.post('/products-filter', jwtCheck, (req, res) => {
 <===== Поулчить Записи С ФИЛЬТРОМ =====>
 */
 app.get('/user-info', jwtCheck, (req, res) => {
-    console.log(req.params)
+ 
     if(req.user.user_id !== 1) {
         User.findAll({
             include: [{
@@ -404,7 +404,7 @@ app.post('/zayavka-na-kurs-proverka', jwtCheck, (req, res) => {
 });
 
 app.post('/message-add', jwtCheck, (req, res) => {
-    Message.create({ userId: req.user.user_id, title: req.body.title, msg: req.body.msg })
+    Message.create({ userId: req.user.user_id, title: req.body.title, msgTema: req.body.msgTema, msg: req.body.msg })
         .then(result => {
             res
             .status(200)
@@ -418,26 +418,46 @@ app.post('/message-add', jwtCheck, (req, res) => {
 });
 
 app.post('/messages', jwtCheck, (req, res)=> {
-    Message.findAll({
-        order: [
-            // Will escape title and validate DESC against a list of valid direction parameters
-        ['id', 'DESC'],
-        ],
-        include: [{
-            model: User,
-            attributes: [ 'name', 'phone' ]
-        }]
-    })
-    .then(result => {
-        res
-        .status(200)
-        .send(result)
-    })
-    .catch(err => {
-        res
-        .status(200)
-        .send({msg: "Error"})
-    })
+    const userId = req.user.user_id;
+    if (userId !== 1) { 
+        Message.findAll({
+            where: {
+                userId: userId
+            }
+        })
+        .then(result => {
+            res
+            .status(200)
+            .send(result)
+        })
+        .catch(err => {
+            res
+            .status(200)
+            .send({msg: "Error"})
+        })
+
+    } else {
+        Message.findAll({
+            order: [
+                // Will escape title and validate DESC against a list of valid direction parameters
+            ['id', 'DESC'],
+            ],
+            include: [{
+                model: User,
+                attributes: [ 'name', 'phone' ]
+            }]
+        })
+        .then(result => {
+            res
+            .status(200)
+            .send(result)
+        })
+        .catch(err => {
+            res
+            .status(200)
+            .send({msg: "Error"})
+        })
+    }
 });
 
 app.post('/zayavka-na-kurs', jwtCheck, (req, res) => {
@@ -499,20 +519,56 @@ app.post('/zayavki-all', jwtCheck, (req, res) => {
 })
 
 
-app.post('/test', (req, res) => {
-    Product.findAll({
-        include: [ User ],
+/*
+<===== Получить User(a) =====>
+*/
+app.post('/get-user', jwtCheck, (req, res) => {
+    const userId = req.user.user_id;
+    User.findAll({ 
+        where: {
+            id: userId,
+        },
+        attributes: ['id', 'name', 'phone', 'age', 'gender', 'status', 'priceStart', 'priceEnd', 'aTravma', 'aDavlenie', 'aPuls', 'aVes'],
+        include: [{
+            model: Category,
+            where: {
+                userId: userId
+            },
+            attributes: [['title', 'direction']]
+        }]
+    })
+    .then(user => {
+        res
+        .status(200)
+        .json(user[0]);
+    })
+    .catch(err => console.log(err));
+});
+/*
+<===== Обновить запись user =====>
+*/
+app.post('/edit-user', jwtCheck, (req, res) => {
+    const userId = req.user.user_id;
+    const updatedTitle = req.body.aTravma;
+    const updatedImageUrl = req.body.aDavlenie;
+    const updatedPrice = req.body.aPuls;
+    const updatedDescription = req.body.aVes;
+
+    User.findById(userId)
+    .then(product => {
+        product.aTravma = updatedTitle;
+        product.aDavlenie = updatedImageUrl;
+        product.aPuls = updatedPrice;
+        product.aVes = updatedDescription;
+        return product.save();
     })
     .then(result => {
         res
         .status(200)
-        .json(result)
+        .json({ msg: 'Ваши данные успешно записаны!'});
     })
-    .catch(err => {
-        console.log(err)
-    })
-})
-
+    .catch(err => console.log(err));
+});
 
 
 ProductUser.belongsTo(Product);
@@ -529,10 +585,10 @@ Zayavka.belongsTo(Product);
 Message.belongsTo(User);
 
 
-
+// { force: true }
 
 connection
-    .sync({ force: true })
+    .sync()
     .then(result => {
         return User.findById(1);
     })

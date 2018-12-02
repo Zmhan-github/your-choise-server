@@ -16,7 +16,11 @@ const User = connection.define('user', {
     gender: Sequelize.STRING,
     status: Sequelize.STRING,
     priceStart: Sequelize.INTEGER,
-    priceEnd: Sequelize.INTEGER
+    priceEnd: Sequelize.INTEGER,
+    aTravma: Sequelize.STRING,
+    aDavlenie: Sequelize.STRING,
+    aPuls: Sequelize.STRING,
+    aVes: Sequelize.STRING
 });
 
 
