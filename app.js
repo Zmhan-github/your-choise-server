@@ -501,7 +501,7 @@ app.post('/zayavki-all', jwtCheck, (req, res) => {
         ],
         include: [{
             model: User,
-            attributes: [ 'name', 'phone' ]
+            attributes: [ 'name', 'phone', 'aTravma', 'aDavlenie', 'aPuls', 'aVes' ]
         },
         {
             model: Product,
@@ -588,7 +588,7 @@ Message.belongsTo(User);
 // { force: true }
 
 connection
-    .sync()
+    .sync({ force: true })
     .then(result => {
         return User.findById(1);
     })
